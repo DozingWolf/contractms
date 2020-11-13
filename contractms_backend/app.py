@@ -1,5 +1,7 @@
-from flask import Flask
-from flask.ext.httpauth import HTTPBasicAuth
+from flask import Flask,make_response,jsonify,abort,request
+from flask_httpauth import HTTPBasicAuth
+
+dataset = [{'name':"CSY",'age':30},{'name':"WCY",'age':"25"}]
 
 app = Flask(__name__)
 
@@ -11,6 +13,34 @@ def index():
 def mainpage():
     return "This is a main page"
 
+@app.route('/api/v1.0/getallemp',methods=['GET'])
+def getallemployee():
+    return jsonify(dataset)
+
+#一个标准的get方法，使用？传递参数
+@app.route('/api/v1.0/testget',methods=['GET'])
+def getemp():
+    if request.args is None:
+        return abort(501)
+    internaldata = request.args.to_dict()
+    empname = internaldata.get('empname')
+    return jsonify(empname)
+
+#不同的get方法，使用自定义的方式传递参数
+@app.route('/api/v1.0/emp/getemployeedetail/<string:empname>',methods=['GET'])
+def getemployee(empname):
+    for user in dataset:
+        if user['name'] == empname:
+            return jsonify(user['age'])
+        else:
+            pass
+
+@app.errorhandler(404)
+def pagenotfound(error):
+    return make_response(jsonify({'error':'PAGE NOT FOUND!'}),404)
+@app.errorhandler(501)
+def internalerror(error):
+    return make_response(jsonify({'error':'INTERNAL ERROR!'}),501)
 # flask路由编写案例
 # @app.route('/api/users', methods=['POST'])
 # def new_user():
