@@ -1,5 +1,6 @@
 from flask import Flask,make_response,jsonify,abort,request
 from flask_httpauth import HTTPBasicAuth
+from dbmodel import UserModel
 
 dataset = [{'name':"CSY",'age':30},{'name':"WCY",'age':"25"}]
 
