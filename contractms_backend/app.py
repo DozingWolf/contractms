@@ -1,10 +1,46 @@
-from flask import Flask,make_response,jsonify,abort,request
+from flask import Flask,make_response,jsonify,abort,request,json
 from flask_httpauth import HTTPBasicAuth
-from dbmodel import UserModel
+from configparser import ConfigParser
+import logging
+import base64
+import cx_Oracle
+import os
+from urllib.parse import urlencode
+from base import AppInitial
 
-dataset = [{'name':"CSY",'age':30},{'name':"WCY",'age':"25"}]
+mainDB = AppInitial()
+dbConn,mainLog = mainDB.getMainFunc()
+dbCurs = dbConn.cursor()
 
 app = Flask(__name__)
+
+#不同的get方法，使用自定义的方式传递参数
+@app.route('/api/v1.0/getuser/<string:usercode>',methods=['GET'])
+def getuser(usercode):
+    select_it_mst_users = '''
+    select
+    USERCODE, USERNAME, USERPW, 
+    CREATEUSER, CREATEDATE, EDITUSER, 
+    EDITDATE, EDITFLAG, STOPFLAG 
+    from it_mst_users
+    where 1=1
+    and usercode =:usercode
+    '''
+    select_it_mst_user_arg_set = {'usercode':usercode}
+    try:
+        dbCurs.execute(select_it_mst_users,select_it_mst_user_arg_set)
+        mainLog.debug('execute sql success %s'%select_it_mst_users)
+        mainLog.debug('sql arg : %s'%select_it_mst_user_arg_set)
+        dbResult = dbCurs.fetchall()
+        mainLog.debug('result is : %s'%dbResult)
+        mainLog.debug(type(dbResult[0][1]))
+    except Exception as err:
+        mainLog.error('execute sql error : %s'%err)
+        mainLog.error('sql : %s'%select_it_mst_users)
+        mainLog.error('sql arg : %s'%select_it_mst_user_arg_set)
+    local_rst_set = json.dumps([dbResult[0][0],dbResult[0][1]])
+    print(local_rst_set)
+    return make_response(local_rst_set)
 
 @app.route('/Goodjob')
 def index():
@@ -16,7 +52,7 @@ def mainpage():
 
 @app.route('/api/v1.0/getallemp',methods=['GET'])
 def getallemployee():
-    return jsonify(dataset)
+    return jsonify('123')
 
 #一个标准的get方法，使用？传递参数
 @app.route('/api/v1.0/testget',methods=['GET'])
@@ -27,14 +63,6 @@ def getemp():
     empname = internaldata.get('empname')
     return jsonify(empname)
 
-#不同的get方法，使用自定义的方式传递参数
-@app.route('/api/v1.0/emp/getemployeedetail/<string:empname>',methods=['GET'])
-def getemployee(empname):
-    for user in dataset:
-        if user['name'] == empname:
-            return jsonify(user['age'])
-        else:
-            pass
 
 @app.errorhandler(404)
 def pagenotfound(error):
