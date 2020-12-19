@@ -14,31 +14,59 @@ dbCurs = dbConn.cursor()
 
 app = Flask(__name__)
 
-#不同的get方法，使用自定义的方式传递参数
-@app.route('/api/v1.0/getuser/<string:usercode>',methods=['GET'])
-def getuser(usercode):
-    select_it_mst_users = '''
+#标准get方法，使用？进行传参
+@app.route('/api/v1.0/getuser/',methods=['GET'])
+def getuser():
+    # 此处的判断空参数好像没有起作用？以后研究以下。。。
+    if request.args is None:
+        return abort(501)
+    query_conditions = request.args.to_dict()
+    mainLog.debug('get parameter is :%s'%query_conditions)
+    try:
+        usercode = query_conditions.get('usercode')
+        mainLog.debug(type(usercode),usercode)
+        username = query_conditions.get('username')
+    except Exception as err:
+        mainLog.error('there is a error in get parament :%s'%err)
+    select_it_mst_users = ''
+    select_it_mst_users_base = '''
     select
-    USERCODE, USERNAME, USERPW, 
-    CREATEUSER, CREATEDATE, EDITUSER, 
-    EDITDATE, EDITFLAG, STOPFLAG 
+    USERCODE, USERNAME, USERPW
     from it_mst_users
     where 1=1
-    and usercode =:usercode
+    and stopflag = '00'
     '''
-    select_it_mst_user_arg_set = {'usercode':usercode}
+
+    select_it_mst_user_arg_set = {}
+    # 判断usercode是否为空
+    if query_conditions.get('usercode',-1) != -1:
+        select_it_mst_users = select_it_mst_users_base + 'and usercode =:usercode '
+        select_it_mst_user_arg_set.update({'usercode':usercode})
+    else:
+        select_it_mst_users = select_it_mst_users_base
+
+    # 判断username是否为空
+    if query_conditions.get('username',-1) != -1:
+        select_it_mst_users = select_it_mst_users + 'and username =:username'
+        select_it_mst_user_arg_set.update({'username':username})
+
+    # 判断所有参数是否都为空
+    if not bool(select_it_mst_user_arg_set):
+        mainLog.error('no input parameter')
+        return abort(503)
+    
     try:
         dbCurs.execute(select_it_mst_users,select_it_mst_user_arg_set)
         mainLog.debug('execute sql success %s'%select_it_mst_users)
         mainLog.debug('sql arg : %s'%select_it_mst_user_arg_set)
         dbResult = dbCurs.fetchall()
         mainLog.debug('result is : %s'%dbResult)
-        mainLog.debug(type(dbResult[0][1]))
     except Exception as err:
         mainLog.error('execute sql error : %s'%err)
         mainLog.error('sql : %s'%select_it_mst_users)
         mainLog.error('sql arg : %s'%select_it_mst_user_arg_set)
-    local_rst_set = json.dumps([dbResult[0][0],dbResult[0][1]])
+    #local_rst_set = json.dumps([dbResult[0][0],dbResult[0][1]])
+    local_rst_set = json.dumps(dbResult)
     print(local_rst_set)
     return make_response(local_rst_set)
 
@@ -70,6 +98,9 @@ def pagenotfound(error):
 @app.errorhandler(501)
 def internalerror(error):
     return make_response(jsonify({'error':'INTERNAL ERROR!'}),501)
+@app.errorhandler(503)
+def inputargserror(error):
+    return make_response(jsonify({'error':'INPUT PARAMETER ERROR!'}),503)
 # flask路由编写案例
 # @app.route('/api/users', methods=['POST'])
 # def new_user():
