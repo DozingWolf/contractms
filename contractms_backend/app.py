@@ -24,7 +24,6 @@ def getuser():
     mainLog.debug('get parameter is :%s'%query_conditions)
     try:
         usercode = query_conditions.get('usercode')
-        mainLog.debug(type(usercode),usercode)
         username = query_conditions.get('username')
     except Exception as err:
         mainLog.error('there is a error in get parament :%s'%err)
@@ -36,7 +35,7 @@ def getuser():
     where 1=1
     and stopflag = '00'
     '''
-
+    table_col_name = ['usercode','username','userpw']
     select_it_mst_user_arg_set = {}
     # 判断usercode是否为空
     if query_conditions.get('usercode',-1) != -1:
@@ -65,10 +64,20 @@ def getuser():
         mainLog.error('execute sql error : %s'%err)
         mainLog.error('sql : %s'%select_it_mst_users)
         mainLog.error('sql arg : %s'%select_it_mst_user_arg_set)
-    #local_rst_set = json.dumps([dbResult[0][0],dbResult[0][1]])
-    local_rst_set = json.dumps(dbResult)
+    # 使用自己编写的函数组合数据结果集，构造数据负载
+    returnMessage = mainDB.transCustomList2Dict(inputlist=dbResult,colnamemodel=table_col_name)
+    local_rst_set = json.dumps(returnMessage)
     print(local_rst_set)
     return make_response(local_rst_set)
+
+
+@app.route('/api/v1.0/postuser/',methods=['POST'])
+def postuser():
+    if request.args is None:
+        return abort(501)
+    query_conditions = request.args.to_dict()
+    mainLog.debug('get parameter is :%s'%query_conditions)
+    return make_response()
 
 @app.route('/Goodjob')
 def index():
