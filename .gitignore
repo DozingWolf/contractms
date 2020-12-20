@@ -135,6 +135,6 @@ dmypy.json
 # test code
 
 test.py
-
+test*.py
 # log file
 .log/
