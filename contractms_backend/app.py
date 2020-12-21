@@ -6,6 +6,8 @@ import base64
 import cx_Oracle
 import os
 from urllib.parse import urlencode
+import signal
+import sys
 from base import AppInitial
 
 mainDB = AppInitial()
@@ -77,7 +79,7 @@ def postuser():
         return abort(501)
     query_conditions = request.args.to_dict()
     mainLog.debug('get parameter is :%s'%query_conditions)
-    return make_response()
+    return make_response(query_conditions)
 
 @app.route('/Goodjob')
 def index():
@@ -124,6 +126,14 @@ def inputargserror(error):
 #     db.session.add(user) #数据通过ORM数据模型写入
 #     db.session.commit() #提交数据到数据库
 #     return jsonify({'username': user.username}), 201, {'Location': url_for('get_user', id=user.id, _external=True)}
+
+# 控制flask关闭时关闭数据库连接
+def signal_handler(sig,act):
+    mainLog.warning('system will be shutdowm...')
+    dbCurs.close()
+    dbConn.close()
+signal.signal(signal.SIGINT,signal_handler)
+signal.signal(signal.SIGTERM,signal_handler)
 
 if __name__ == '__main__':
     app.run(debug=True)
