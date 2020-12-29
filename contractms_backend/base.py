@@ -30,6 +30,11 @@ class AppInitial(object):
         self.dbServicename = self.para.get('db','servicename')
         self.dbSchema = self.para.get('db','schemaname')
         self.sysLog.debug('db info is [IP:%s,Port:%s,Servicename:%s,Schemaname:%s]'%(self.dbIP,self.dbPort,self.dbServicename,self.dbSchema))
+        
+        self.tokenSecKey = self.para.get('secret','secretkey')
+        self.sysLog.debug('token securit key : %s'%self.tokenSecKey)
+        self.tokenExpTime = int(self.para.get('secret','expirestime'))
+        self.sysLog.debug('token ket exptime : %d'%self.tokenExpTime)
 
         # # base64 encode
 
@@ -56,6 +61,12 @@ class AppInitial(object):
     
     def getMainFunc(self):
         return self.dbConnect,self.sysLog
+    
+    def getSecKey(self):
+        return self.tokenSecKey
+
+    def getExpTime(self):
+        return self.tokenExpTime
     
     def transCustomList2Dict(self,inputlist=[],colnamemodel=[]):
         # 用于处理数据库反馈list转换成可被前端读取的dict，供后续转json使用
