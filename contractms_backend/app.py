@@ -10,7 +10,8 @@ import os
 from urllib.parse import urlencode
 import signal
 import sys
-from base import AppInitial
+from baseTools import AppInitial
+from querybuilder import queryBuilderFactory
 
 mainDB = AppInitial()
 dbConn,mainLog = mainDB.getMainFunc()
