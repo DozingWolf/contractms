@@ -76,14 +76,7 @@ class queryBuilderFactory(object):
     # pg未实验，如有人有兴趣可以自行测试
     # 本构造工具需要与cx_Oracle等数据库连接工具配合使用
     # 暂时不支持输出原生sql，因where条件内的绑定字符参数和普通字符串会混淆，难以判断
-    def __init__(self,tname = '',loghandler = None,debugmode = 1):
-        # 判断是否为调试模式，未来希望控制输出日志的等级
-        if debugmode == 0:
-            if loghandler == None:
-                print('class [queryBuilderFactory] need a loghandler to initial')
-                raise noLogHandlerError('class [queryBuilderFactory] need a loghandler to initial')
-        elif debugmode == 1:
-            pass
+    def __init__(self,tname = '',loghandler = None,dbhandler = None,debugmode = 1):
         if tname:
             if type(tname) == list:
                 pass
@@ -93,13 +86,72 @@ class queryBuilderFactory(object):
                 raise tableNameError('class [queryBuilderFactory] initial arg[tname] type must in(str,list)') 
         else:
             raise tableNameError('class [queryBuilderFactory] need import arg: [tname]')
-        
+        # 判断是否为调试模式，未来希望控制输出日志的等级
+        # 0为正常模式，1为debug模式
+        if debugmode == 0:
+            if loghandler == None:
+                print('class [queryBuilderFactory] need a loghandler to initial')
+                raise noLogHandlerError('class [queryBuilderFactory] need a loghandler to initial')
+        elif debugmode == 1:
+            # 如果传入了db连接，用db连接进入数据库取表字段
+            # 暂时为测试功能
+            if not dbhandler:
+                pass
+            else:
+                self.__dbcurs = dbhandler
+                self.__colName = self.__getTableColumnsName()
+                print(self.__colName)
+                self.__tableColumnsNameDcit = {}
+                for self.__nameInDataResult in self.__colName:
+                    self.__tableColumnsNameDcit.update({self.__nameInDataResult[0]:{'columntype':self.__nameInDataResult[1],'columncomm':self.__nameInDataResult[2]}})
+                print(self.__tableColumnsNameDcit)
+
         self.__baseQuerySelect = 'select'
         self.__baseQueryUpdate = 'update'
         self.__baseQueryInsert = 'insert into'
     
     def getTableName(self):
         return self.__tableName
+    
+    def __getTableColumnsName(self):
+        # 暂时作为内部方法，不提供外部调用避免出现问题
+        # 从oracle的用户视图取出相关表的字段和说明
+        self.__select_table_columns_name_sql = '''
+        SELECT
+        COLU.COLUMN_NAME,COLU.DATA_TYPE,
+        COMM.COMMENTS
+        FROM USER_ALL_TABLES TAB
+        INNER JOIN USER_TAB_COLUMNS COLU ON TAB.TABLE_NAME = COLU.TABLE_NAME
+        INNER JOIN USER_COL_COMMENTS COMM ON COLU.TABLE_NAME = COMM.TABLE_NAME AND COLU.COLUMN_NAME = COMM.COLUMN_NAME
+        WHERE TAB.TABLE_NAME = upper(:tablename)
+        '''
+        self.__select_table_columns_name_query_set = {'tablename':self.__tableName}
+        try:
+            print(self.__select_table_columns_name_sql)
+            print(self.__select_table_columns_name_query_set)
+            self.__dbcurs.execute(self.__select_table_columns_name_sql,self.__select_table_columns_name_query_set)
+            self.__tableColumns = self.__dbcurs.fetchall()
+        except Exception as err:
+            print('get table columns name error: %s'%err)
+        
+        # if self.__tableColumns :
+        #     pass
+        return self.__tableColumns
+
+    def getColumnNameDict(self):
+        # 用户外部用户获取该表字段相关信息
+        if self.__tableColumnsNameDcit:
+            return self.__tableColumnsNameDcit
+        else:
+            return None
+    
+    def getColumnDetail(self,colname):
+        # 用于获取处理得到的字段具体信息
+        if colname:
+            return self.__tableColumnsNameDcit.get(colname)
+        else:
+            return None
+        
 
     def queryBuilder(self,qtype:enumerate,**querycondition):  
     # 查询构建器的设计思路：传入sql语句类型，提供select、update、insert三种方式
