@@ -105,8 +105,7 @@ class queryBuilderFactory(object):
                 for self.__nameInDataResult in self.__colName:
                     self.__tableColumnsNameDcit.update({self.__nameInDataResult[0]:{'columntype':self.__nameInDataResult[1],'columncomm':self.__nameInDataResult[2]}})
                     # 尝试动态注册类变量到类内
-                    print('dynamic attr reg start:')
-                    setattr(self,self.__nameInDataResult[0],{'columntype':self.__nameInDataResult[1],'columncomm':self.__nameInDataResult[2]})
+                    setattr(self,self.__nameInDataResult[0],{'columnname':self.__nameInDataResult[0],'columntype':self.__nameInDataResult[1],'columncomm':self.__nameInDataResult[2]})
                 # print(self.__tableColumnsNameDcit)
 
         self.__baseQuerySelect = 'select'
@@ -130,8 +129,6 @@ class queryBuilderFactory(object):
         '''
         self.__select_table_columns_name_query_set = {'tablename':self.__tableName}
         try:
-            print(self.__select_table_columns_name_sql)
-            print(self.__select_table_columns_name_query_set)
             self.__dbcurs.execute(self.__select_table_columns_name_sql,self.__select_table_columns_name_query_set)
             self.__tableColumns = self.__dbcurs.fetchall()
         except Exception as err:
@@ -255,3 +252,24 @@ class queryBuilderFactory(object):
             raise queryTypeError(qtype)
         return None
         
+    # 上面实现了一个简单的查询构造，下面尝试使用类似orm的对象操作方式来进行实现
+    def queryConditionContains(self,querycondition,querydata:list ):
+        self.__select_sql_list = []
+        self.__select_sql_list.append(self.__baseQuerySelect)
+        self.__select_sql_list.append(self.__tableName)
+        self.__select_sql_list.append('where')
+        self.__select_sql_list.append(querycondition.get('columnname'))
+        self.__select_sql_list.append('in (')
+        self.__select_sql_list.append(','.join(map(str,querydata)))
+        self.__select_sql_list.append(')')
+        return ' '.join(self.__select_sql_list)
+        
+        # print(list(dict(querycondition=querycondition).keys())[0])
+
+    def selectSingleTable(self,**querycondition):
+        # 尝试用python对象来处理select事务
+        # 设计函数调用方式：
+        # tableA = queryBuilderFactory(tname = 'Ta',dbhandler = DBHandler)
+        # tableA.selectSingleTable(tableA.ID=10,)
+        # 子过程内部利用函数来处理构造sql
+        print(querycondition)
