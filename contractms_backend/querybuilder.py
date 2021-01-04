@@ -104,7 +104,10 @@ class queryBuilderFactory(object):
                 self.__tableColumnsNameDcit = {}
                 for self.__nameInDataResult in self.__colName:
                     self.__tableColumnsNameDcit.update({self.__nameInDataResult[0]:{'columntype':self.__nameInDataResult[1],'columncomm':self.__nameInDataResult[2]}})
-                print(self.__tableColumnsNameDcit)
+                    # 尝试动态注册类变量到类内
+                    print('dynamic attr reg start:')
+                    setattr(self,self.__nameInDataResult[0],{'columntype':self.__nameInDataResult[1],'columncomm':self.__nameInDataResult[2]})
+                # print(self.__tableColumnsNameDcit)
 
         self.__baseQuerySelect = 'select'
         self.__baseQueryUpdate = 'update'
