@@ -9,3 +9,4 @@
 |2021-01-01|写了一个简易的SQL构造器，先实现查询select和更新update，准备实现单行insert和批量insert。|
 |2020-01-02|开发者考虑再查询构建器内加一个表字段名和数据类型获取器，给类里面传入一个dbhandler试试看|
 |2021-01-04|dbhandler成功，尝试再__init__内动态setattr，成功|
+|2021-01-05|利用链式调用设计sql构造思路，调用链路：sql,paradata = table('Ta').select(table.colA,table.colB,table.colC,...).where(contain(table.colA,[10,20,5,56,...])).and(eq(table.colB,'90')).or(eq(table.colC,33)).....get(returntype = str[/list]) 使对象调用方法尽量符合传统sql的书写方式，便于使用|

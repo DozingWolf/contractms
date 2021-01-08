@@ -8,6 +8,11 @@ class queryType(Enum):
     insert = 2
     update = 3
 
+@unique
+class returnType(Enum):
+    strSql = 0
+    listSql = 1
+
 class queryTypeError(Exception):
     def __init__(self,msg):
         self.msg = msg
@@ -66,6 +71,15 @@ class tableNameError(Exception):
     
     def __repr__(self):
         return 'tableNameError :'
+class getSqlError(Exception):
+    def __init__(self,msg):
+        self.msg = msg
+
+    def __str__(self):
+        return str(self.msg)
+    
+    def __repr__(self):
+        return 'getSqlError :'
 
 class queryBuilderFactory(object):
     # 这个查询语句构造工具暂时仅适配oracle数据库
@@ -111,6 +125,7 @@ class queryBuilderFactory(object):
         self.__baseQuerySelect = 'select'
         self.__baseQueryUpdate = 'update'
         self.__baseQueryInsert = 'insert into'
+        self.__returnQuerySet = []
     
     def getTableName(self):
         return self.__tableName
@@ -265,11 +280,88 @@ class queryBuilderFactory(object):
         return ' '.join(self.__select_sql_list)
         
         # print(list(dict(querycondition=querycondition).keys())[0])
+    # 尝试用python对象来处理select、update、insert事务
+    # 设计函数调用方式：
+    # tableA = queryBuilderFactory(tname = 'Ta',dbhandler = DBHandler)
+    # tableA.selectSingleTable(tableA.ID,tableA.USERCODE).whereCondition(tableA.ID,3)[.andCondition(something,someone)].get(returntype = strSql)
+    # 子过程内部利用函数来处理构造sql
+    def selectTable(self,*colcondition):
+        # 希望得到的结果是['select','colA,colB,colC,...','from','TableA']
+        self.__colName = []
+        self.__returnQuerySet.append(self.__baseQuerySelect)
+        for col in colcondition:
+            self.__colName.append(col.get('columnname'))
+        self.__returnQuerySet.append(','.join(self.__colName))
+        self.__returnQuerySet.append('from')
+        self.__returnQuerySet.append(self.__tableName)
+        print(self.__returnQuerySet)
+        return self
 
-    def selectSingleTable(self,**querycondition):
-        # 尝试用python对象来处理select事务
-        # 设计函数调用方式：
-        # tableA = queryBuilderFactory(tname = 'Ta',dbhandler = DBHandler)
-        # tableA.selectSingleTable(tableA.ID=10,)
-        # 子过程内部利用函数来处理构造sql
-        print(querycondition)
+    def insertTable(self,**colcondition):
+        return self
+
+    def updateTable(self,**colcondition):
+        return self
+    
+    def setCondition(self):
+        return self
+    
+    def whereCondition(self,condition:list):
+        # where条件处理时先把前面的查询list拼合成str，并压入list
+        # 入参condition必须时list，在方法内使用extend方法拼接两个list
+        self.__returnQuerySet = [].append(' '.join(self.__returnQuerySet))
+        self.__returnQuerySet.append('where')
+        self.__returnQuerySet.extend(condition)
+        return self
+
+    def valuesCondition(self):
+        return self
+
+    def andConnection(self,colname,value):
+        return self
+
+    def orConection(self,colname,value):
+        return self
+    
+    def eqCalculator(self,colname,value):
+        self.__returnQuerySet.append('and')
+        self.__returnQuerySet.append(colname.get('columnname'))
+        self.__returnQuerySet.append('=')
+        self.__returnQuerySet.append(value)
+        return self
+
+    def notEqCalculator(self,colname,value):
+        self.__returnQuerySet.append('and')
+        self.__returnQuerySet.append(colname.get('columnname'))
+        self.__returnQuerySet.append('<>')
+        self.__returnQuerySet.append(value)
+        return self
+
+    def moreThanCalculator(self):
+        return self
+
+    def lessThanCalculator(self):
+        return self
+
+    def containCalculator(self,colname,*condition):
+        # in计算
+        self.__returnQuerySet.append('and')
+        self.__returnQuerySet.append(colname.get('columnname'))
+        self.__returnQuerySet.append('in')
+        self.__returnQuerySet.append('(')
+        self.__returnQuerySet.extend(condition)
+        self.__returnQuerySet.append(')')
+        return self
+
+    def get(self, returntype = returnType.strSql):
+        # 根据需要返回字符串类型或者list类型的sql，同时返回构造好的查询绑定变量dict
+        if returntype == returnType.strSql:
+            self.__returnData = ' '.join(self.__returnQuerySet)
+            self.__returnQuerySet = []
+            return self.__returnData
+        elif returntype == returnType.listSql:
+            self.__returnData = self.__returnQuerySet
+            self.__returnQuerySet = []
+            return self.__returnData
+        else:
+            raise getSqlError('get return type error')
