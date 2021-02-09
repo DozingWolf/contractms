@@ -126,6 +126,7 @@ class queryBuilderFactory(object):
         self.__baseQueryUpdate = 'update'
         self.__baseQueryInsert = 'insert into'
         self.__returnQuerySet = []
+        self.__returnQueryConditionSet = {}
     
     def getTableName(self):
         return self.__tableName
@@ -306,62 +307,87 @@ class queryBuilderFactory(object):
     def setCondition(self):
         return self
     
-    def whereCondition(self,condition:list):
+    def whereCondition(self,inarg:tuple):#condition:list,calcset:dict):
         # where条件处理时先把前面的查询list拼合成str，并压入list
         # 入参condition必须时list，在方法内使用extend方法拼接两个list
-        self.__returnQuerySet = [].append(' '.join(self.__returnQuerySet))
+        self.__returnQuerySet = [' '.join(self.__returnQuerySet)]
         self.__returnQuerySet.append('where')
-        self.__returnQuerySet.extend(condition)
+        self.__returnQuerySet.extend(inarg[0])
+        self.__returnQueryConditionSet.update(inarg[1])
         return self
 
     def valuesCondition(self):
         return self
 
-    def andConnection(self,colname,value):
+    def andConnection(self,condition:list):
+        self.__returnQuerySet.append('and')
+        self.__returnQuerySet.extend(condition)
         return self
 
-    def orConection(self,colname,value):
+    def orConection(self,condition:list):
+        self.__returnQuerySet.append('or')
+        self.__returnQuerySet.extend(condition)
         return self
     
     def eqCalculator(self,colname,value):
-        self.__returnQuerySet.append('and')
-        self.__returnQuerySet.append(colname.get('columnname'))
-        self.__returnQuerySet.append('=')
-        self.__returnQuerySet.append(value)
-        return self
+        self.__returnCalcSet = []
+        self.__returnCalcSet.append(colname.get('columnname'))
+        self.__returnCalcSet.append('=')
+        self.__returnCalcSet.append(value)
+        self.__returnQueryConditionSet.update({colname.get('columnname'):value})
+        print('eq calc is :',self.__returnCalcSet)
+        print('eq calc set is :',self.__returnQueryConditionSet)
+        return self.__returnCalcSet,self.__returnQueryConditionSet
 
     def notEqCalculator(self,colname,value):
-        self.__returnQuerySet.append('and')
-        self.__returnQuerySet.append(colname.get('columnname'))
-        self.__returnQuerySet.append('<>')
-        self.__returnQuerySet.append(value)
-        return self
+        self.__returnCalcSet = []
+        self.__returnCalcSet.append(colname.get('columnname'))
+        self.__returnCalcSet.append('<>')
+        self.__returnCalcSet.append(value)
+        return self.__returnCalcSet
 
-    def moreThanCalculator(self):
-        return self
+    def greaterThanCalculator(self,colname,value,geflag = False):
+        self.__returnCalcSet = []
+        self.__returnCalcSet.append(colname.get('columnname'))
+        if not geflag:
+            self.__returnCalcSet.append('>')
+        else:
+            self.__returnCalcSet.append('>=')
+        self.__returnCalcSet.append(value)
+        return self.__returnCalcSet
 
-    def lessThanCalculator(self):
-        return self
+    def lessThanCalculator(self,colname,value,leflag = False):
+        self.__returnCalcSet = []
+        self.__returnCalcSet.append(colname.get('columnname'))
+        if not leflag:
+            self.__returnCalcSet.append('<')
+        else:
+            self.__returnCalcSet.append('<=')
+        self.__returnCalcSet.append(value)
+        return self.__returnCalcSet
 
     def containCalculator(self,colname,*condition):
         # in计算
-        self.__returnQuerySet.append('and')
-        self.__returnQuerySet.append(colname.get('columnname'))
-        self.__returnQuerySet.append('in')
-        self.__returnQuerySet.append('(')
-        self.__returnQuerySet.extend(condition)
-        self.__returnQuerySet.append(')')
-        return self
+        self.__returnCalcSet = []
+        self.__returnCalcSet.append('and')
+        self.__returnCalcSet.append(colname.get('columnname'))
+        self.__returnCalcSet.append('in')
+        self.__returnCalcSet.append('(')
+        self.__returnCalcSet.extend(condition)
+        self.__returnCalcSet.append(')')
+        return self.__returnCalcSet
 
-    def get(self, returntype = returnType.strSql):
+    def getsql(self, returntype = returnType.strSql):
         # 根据需要返回字符串类型或者list类型的sql，同时返回构造好的查询绑定变量dict
+        self.__returnParaSet = self.__returnQueryConditionSet
+        self.__returnQuerySet.append(';')
         if returntype == returnType.strSql:
+            print('data is ',self.__returnQuerySet)
             self.__returnData = ' '.join(self.__returnQuerySet)
             self.__returnQuerySet = []
-            return self.__returnData
         elif returntype == returnType.listSql:
             self.__returnData = self.__returnQuerySet
             self.__returnQuerySet = []
-            return self.__returnData
         else:
             raise getSqlError('get return type error')
+        return self.__returnData,self.__returnParaSet
